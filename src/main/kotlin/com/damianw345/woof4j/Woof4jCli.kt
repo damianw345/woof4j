@@ -6,19 +6,25 @@ import org.rauschig.jarchivelib.CompressionType
 import picocli.CommandLine
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
+import spark.Spark
 import spark.Spark.*
 import java.io.File
+import java.net.InetAddress
+import java.net.DatagramSocket
+
 
 @Command(
     name = "woof4j", mixinStandardHelpOptions = true, version = ["woof4j 1.0"],
-    description = ["""
-            Serves a single file <count> times via http on port <port> on IP address <ip_addr>.
-        """]
+    description = ["Serves a single file <count> times via http on port <port> on IP address <ip_addr>"]
 )
 class Woof4jCli : Runnable {
 
+//  https://stackoverflow.com/a/38342964
     @Option(names = ["-i", "--ip"], description = ["IP address to share the file"])
-    private var ipAddress = ""
+    private var ipAddress = DatagramSocket().use { socket ->
+        socket.connect(InetAddress.getByName("8.8.8.8"), 10002)
+        socket.localAddress.hostAddress
+    }
 
     @Option(names = ["-p", "--port"], description = ["Port to be used to share the file"])
     private var port = 8080
@@ -51,7 +57,10 @@ class Woof4jCli : Runnable {
 //    private var upload = ""
 
     override fun run() {
+
+
         port(port)
+        Spark.ipAddress(ipAddress)
         externalStaticFileLocation("/home/dw/Desktop")
         init()
         //    compressFile("/home/dw/bin", "/home/dw/Desktop")
