@@ -1,16 +1,13 @@
 package com.damianw345.woof4j
 
-import org.rauschig.jarchivelib.ArchiveFormat
-import org.rauschig.jarchivelib.ArchiverFactory
-import org.rauschig.jarchivelib.CompressionType
 import picocli.CommandLine
-import picocli.CommandLine.Command
-import picocli.CommandLine.Option
+import picocli.CommandLine.*
 import spark.Spark
 import spark.Spark.*
-import java.io.File
-import java.net.InetAddress
 import java.net.DatagramSocket
+import java.net.InetAddress
+import java.nio.file.Files
+import java.nio.file.Paths
 
 
 @Command(
@@ -19,7 +16,7 @@ import java.net.DatagramSocket
 )
 class Woof4jCli : Runnable {
 
-//  https://stackoverflow.com/a/38342964
+    //  https://stackoverflow.com/a/38342964
     @Option(names = ["-i", "--ip"], description = ["IP address to share the file"])
     private var ipAddress = DatagramSocket().use { socket ->
         socket.connect(InetAddress.getByName("8.8.8.8"), 10002)
@@ -56,14 +53,27 @@ class Woof4jCli : Runnable {
 //    @Option(names = ["-U", "--upload"], description = ["woof provides an upload form and allows uploading files"])
 //    private var upload = ""
 
-    override fun run() {
+    @Parameters(
+        description = ["""When no filename is specified, or set to '-', then stdin will be read. When a directory is specified, an tar archive gets served. By default it is gzip compressed"""]
+    )
+    private var filePath = ""
 
+    override fun run() {
 
         port(port)
         Spark.ipAddress(ipAddress)
-        externalStaticFileLocation("/home/dw/Desktop")
+//        externalStaticFileLocation(filePath)
+
         init()
-        //    compressFile("/home/dw/bin", "/home/dw/Desktop")
+
+        get("/") { request, response ->
+            response.header("Content-Type", "application/octet-stream")
+
+            val bytes = Files.readAllBytes(Paths.get(filePath))
+            val raw = response.raw()
+
+            raw.outputStream.use { it.write(bytes) }
+        }
     }
 
     companion object {
@@ -73,9 +83,5 @@ class Woof4jCli : Runnable {
         }
     }
 
-    private fun compressFile(source: String, dest: String): File {
-        val archiveName = "tmp.tar.gz"
-        val archiver = ArchiverFactory.createArchiver(ArchiveFormat.TAR, CompressionType.GZIP)
-        return archiver.create(archiveName, File(dest), File(source))
-    }
+
 }
