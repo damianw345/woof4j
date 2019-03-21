@@ -1,5 +1,7 @@
 package com.damianw345.woof4j
 
+import org.rauschig.jarchivelib.ArchiveFormat
+import org.rauschig.jarchivelib.CompressionType
 import picocli.CommandLine
 import picocli.CommandLine.*
 import spark.Spark
@@ -32,25 +34,25 @@ class Woof4jCli : Runnable {
     private var count = 1
 
     @Option(names = ["-z", "--gzip"], description = ["Used on a directory, it creates a tarball with gzip compression"])
-    private var gzip = ""
+    private var gzip = false
 
     @Option(
         names = ["-j", "--bzip2"],
         description = ["Used on a directory, it creates a tarball with bzip2 compression"]
     )
-    private var bzip2 = ""
+    private var bzip2 = false
 
     @Option(names = ["-Z", "--zip"], description = ["Used on a directory, it creates a tarball with ZIP compression"])
-    private var zip = ""
+    private var zip = false
 
     @Option(
         names = ["-u", "--tarball"],
         description = ["Used on a directory, it creates a tarball with no compression"]
     )
-    private var tarball = ""
+    private var tarball = false
 
     @Option(names = ["-s", "--shareWoof"], description = ["Used to distribute woof itself"])
-    private var shareWoof = ""
+    private var shareWoof = false
 
 //    @Option(names = ["-U", "--upload"], description = ["woof provides an upload form and allows uploading files"])
 //    private var upload = ""
@@ -60,12 +62,18 @@ class Woof4jCli : Runnable {
     )
     private var filePath = ""
 
-    private var compressedFile: File? = null
+    private var packedFile: File? = null
 
     override fun run() {
 
+        val compressionTypes = mapOf(CompressionType.GZIP to gzip, CompressionType.BZIP2 to bzip2, CompressionType.XZ to zip, CompressionType.PACK200 to tarball)
+        val archiveTypes = mapOf(ArchiveFormat.ZIP to zip, ArchiveFormat.TAR to tarball)
+
         port(port)
         Spark.ipAddress(ipAddress)
+
+        val compression = getCompressionType(compressionTypes)
+        val archive = getArchiveType(archiveTypes)
 
         get("/") { _, response ->
 
@@ -73,8 +81,12 @@ class Woof4jCli : Runnable {
             val file = path.toFile()
 
             if(file.isDirectory){
-                compressedFile = compressFile(file)
-                path = compressedFile?.toPath()
+
+                packedFile = if(tarball or zip)
+                    archiveFile(file, archive)
+                else compressFile(file, archive, compression)
+
+                path = packedFile?.toPath()
             }
 
             response.header("Content-Type", "application/octet-stream")
@@ -90,7 +102,7 @@ class Woof4jCli : Runnable {
             if(--count <= 0){
 //                stop()
 //                awaitStop()
-                compressedFile?.delete()
+                packedFile?.delete()
                 exitProcess(0)
             }
         }
