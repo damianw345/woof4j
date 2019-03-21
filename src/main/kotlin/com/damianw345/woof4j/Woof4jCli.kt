@@ -4,10 +4,12 @@ import picocli.CommandLine
 import picocli.CommandLine.*
 import spark.Spark
 import spark.Spark.*
+import java.io.File
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.nio.file.Files
 import java.nio.file.Paths
+import kotlin.system.exitProcess
 
 
 @Command(
@@ -27,7 +29,7 @@ class Woof4jCli : Runnable {
     private var port = 8080
 
     @Option(names = ["-c", "--count"], description = ["Number of times to share the file"])
-    private var count = ""
+    private var count = 1
 
     @Option(names = ["-z", "--gzip"], description = ["Used on a directory, it creates a tarball with gzip compression"])
     private var gzip = ""
@@ -58,21 +60,39 @@ class Woof4jCli : Runnable {
     )
     private var filePath = ""
 
+    private var compressedFile: File? = null
+
     override fun run() {
 
         port(port)
         Spark.ipAddress(ipAddress)
-//        externalStaticFileLocation(filePath)
 
-        init()
+        get("/") { _, response ->
 
-        get("/") { request, response ->
+            var path = Paths.get(filePath)
+            val file = path.toFile()
+
+            if(file.isDirectory){
+                compressedFile = compressFile(file)
+                path = compressedFile?.toPath()
+            }
+
             response.header("Content-Type", "application/octet-stream")
+            response.header("Content-Disposition", "attachment; filename=${path.fileName}")
 
-            val bytes = Files.readAllBytes(Paths.get(filePath))
+            val bytes = Files.readAllBytes(path)
             val raw = response.raw()
 
             raw.outputStream.use { it.write(bytes) }
+        }
+
+        after("/"){ _, _ ->
+            if(--count <= 0){
+//                stop()
+//                awaitStop()
+                compressedFile?.delete()
+                exitProcess(0)
+            }
         }
     }
 
@@ -82,6 +102,4 @@ class Woof4jCli : Runnable {
             CommandLine.run(Woof4jCli(), System.err, *args)
         }
     }
-
-
 }
