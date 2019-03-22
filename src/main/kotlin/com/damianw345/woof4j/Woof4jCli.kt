@@ -12,6 +12,8 @@ import java.net.InetAddress
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
+import org.slf4j.LoggerFactory
+import java.net.URI
 
 
 @Command(
@@ -71,6 +73,8 @@ class Woof4jCli : Runnable {
 
         port(port)
         Spark.ipAddress(ipAddress)
+
+        println("Serving at: ${ipAddress}:${port}/")
 
         val compression = getCompressionType(compressionTypes)
         val archive = getArchiveType(archiveTypes)
