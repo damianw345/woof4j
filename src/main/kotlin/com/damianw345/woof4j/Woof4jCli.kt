@@ -3,7 +3,9 @@ package com.damianw345.woof4j
 import org.rauschig.jarchivelib.ArchiveFormat
 import org.rauschig.jarchivelib.CompressionType
 import picocli.CommandLine
-import picocli.CommandLine.*
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 import spark.Spark
 import spark.Spark.*
 import java.io.File
@@ -12,8 +14,6 @@ import java.net.InetAddress
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
-import org.slf4j.LoggerFactory
-import java.net.URI
 
 
 @Command(
@@ -44,7 +44,7 @@ class Woof4jCli : Runnable {
     )
     private var bzip2 = false
 
-    @Option(names = ["-Z", "--zip"], description = ["Used on a directory, it creates a tarball with ZIP compression"])
+    @Option(names = ["-Z", "--zip"], description = ["Used on a directory, it creates a ZIP archive"])
     private var zip = false
 
     @Option(
@@ -53,14 +53,14 @@ class Woof4jCli : Runnable {
     )
     private var tarball = false
 
-    @Option(names = ["-s", "--shareWoof"], description = ["Used to distribute woof itself"])
-    private var shareWoof = false
+//    @Option(names = ["-s", "--shareWoof"], description = ["Used to distribute woof itself"])
+//    private var shareWoof = false
 
 //    @Option(names = ["-U", "--upload"], description = ["woof provides an upload form and allows uploading files"])
 //    private var upload = ""
 
     @Parameters(
-        description = ["""When no filename is specified, or set to '-', then stdin will be read. When a directory is specified, an tar archive gets served. By default it is gzip compressed"""]
+        description = ["""When a directory is specified, an tar archive gets served. By default it is gzip compressed"""]
     )
     private var filePath = ""
 
@@ -68,7 +68,7 @@ class Woof4jCli : Runnable {
 
     override fun run() {
 
-        val compressionTypes = mapOf(CompressionType.GZIP to gzip, CompressionType.BZIP2 to bzip2, CompressionType.XZ to zip, CompressionType.PACK200 to tarball)
+        val compressionTypes = mapOf(CompressionType.GZIP to gzip, CompressionType.BZIP2 to bzip2)
         val archiveTypes = mapOf(ArchiveFormat.ZIP to zip, ArchiveFormat.TAR to tarball)
 
         port(port)
@@ -104,8 +104,6 @@ class Woof4jCli : Runnable {
 
         after("/"){ _, _ ->
             if(--count <= 0){
-//                stop()
-//                awaitStop()
                 packedFile?.delete()
                 exitProcess(0)
             }
