@@ -74,7 +74,7 @@ class Woof4jCli : Runnable {
         port(port)
         Spark.ipAddress(ipAddress)
 
-        println("Serving at: ${ipAddress}:${port}/")
+        println("Serving at: http://${ipAddress}:${port}/")
 
         val compression = getCompressionType(compressionTypes)
         val archive = getArchiveType(archiveTypes)
