@@ -59,7 +59,8 @@ class Woof4jCli : Runnable {
 //    private var upload = ""
 
     @Parameters(
-        description = ["""When a directory is specified, an tar archive gets served. By default it is gzip compressed"""]
+        description = ["""When a directory is specified, an tar archive gets served. By default it is gzip compressed"""],
+        arity = "0..1"
     )
     private var filePath = ""
 
@@ -75,9 +76,13 @@ class Woof4jCli : Runnable {
         port(port)
         Spark.ipAddress(ipAddress)
 
-        println("Serving at: http://${ipAddress}:${port}/")
+        println("Serving at: http://$ipAddress:$port/")
 
-        utils.serveFile(filePath)
+        if(shareWoof){
+            utils.serveWoofJar()
+        } else {
+            utils.serveFile(filePath)
+        }
 
         after("/"){ _, _ ->
             if(--count <= 0){

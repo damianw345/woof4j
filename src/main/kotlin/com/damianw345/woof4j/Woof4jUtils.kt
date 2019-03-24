@@ -3,10 +3,12 @@ package com.damianw345.woof4j
 import org.rauschig.jarchivelib.ArchiveFormat
 import org.rauschig.jarchivelib.ArchiverFactory
 import org.rauschig.jarchivelib.CompressionType
-import picocli.CommandLine
 import spark.Response
 import spark.Spark
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+import java.lang.Thread.sleep
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -23,6 +25,27 @@ class Woof4jUtils(private val packMethod: PackMethod) {
                 path = packFile(file, packMethod.archiveFormat, packMethod.compressionType).toPath()
 
             serializeFile(path, response)
+        }
+    }
+
+    fun serveWoofJar(){
+        Spark.get("/") { _, response ->
+
+            val classLoader = ClassLoader.getSystemClassLoader()
+            val inputStream = classLoader.getResourceAsStream("woof4j.jar")
+
+            response.header("Content-Type", "application/octet-stream")
+            response.header("Content-Disposition", "attachment; filename=woof4j.jar")
+
+            var bytesRead = 0
+            val buffer = ByteArray(1024)
+
+            val raw = response.raw()
+            raw.outputStream.use {
+                while(inputStream.read(buffer).also { bytesRead = it } >=0) {
+                    it.write(buffer, 0, bytesRead)
+                }
+            }
         }
     }
 
