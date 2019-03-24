@@ -11,7 +11,6 @@ import spark.Spark.*
 import java.io.File
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
 
@@ -53,8 +52,8 @@ class Woof4jCli : Runnable {
     )
     private var tarball = false
 
-//    @Option(names = ["-s", "--shareWoof"], description = ["Used to distribute woof itself"])
-//    private var shareWoof = false
+    @Option(names = ["-s", "--shareWoof"], description = ["Used to distribute woof itself"])
+    private var shareWoof = false
 
 //    @Option(names = ["-U", "--upload"], description = ["woof provides an upload form and allows uploading files"])
 //    private var upload = ""
@@ -64,47 +63,24 @@ class Woof4jCli : Runnable {
     )
     private var filePath = ""
 
-    private var packedFile: File? = null
-
     override fun run() {
 
-        val compressionTypes = mapOf(CompressionType.GZIP to gzip, CompressionType.BZIP2 to bzip2)
-        val archiveTypes = mapOf(ArchiveFormat.ZIP to zip, ArchiveFormat.TAR to tarball)
+        val compressionTypes = mapOf(gzip to CompressionType.GZIP, bzip2 to CompressionType.BZIP2)
+        val archiveTypes = mapOf(zip to ArchiveFormat.ZIP , tarball to ArchiveFormat.TAR)
+
+        val packMethod = PackMethod(compressionTypes.getOrDefault(true, CompressionType.GZIP), archiveTypes.getOrDefault(true, ArchiveFormat.TAR))
+
+        val utils = Woof4jUtils(packMethod)
 
         port(port)
         Spark.ipAddress(ipAddress)
 
         println("Serving at: http://${ipAddress}:${port}/")
 
-        val compression = getCompressionType(compressionTypes)
-        val archive = getArchiveType(archiveTypes)
-
-        get("/") { _, response ->
-
-            var path = Paths.get(filePath)
-            val file = path.toFile()
-
-            if(file.isDirectory){
-
-                packedFile = if(tarball or zip)
-                    archiveFile(file, archive)
-                else compressFile(file, archive, compression)
-
-                path = packedFile?.toPath()
-            }
-
-            response.header("Content-Type", "application/octet-stream")
-            response.header("Content-Disposition", "attachment; filename=${path.fileName}")
-
-            val bytes = Files.readAllBytes(path)
-            val raw = response.raw()
-
-            raw.outputStream.use { it.write(bytes) }
-        }
+        utils.serveFile(filePath)
 
         after("/"){ _, _ ->
             if(--count <= 0){
-                packedFile?.delete()
                 exitProcess(0)
             }
         }
