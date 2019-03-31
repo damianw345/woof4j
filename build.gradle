@@ -48,3 +48,10 @@ jar{
     // files or particular types at will
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 }
+
+task copyJar(type: Copy) {
+    from jar
+    into 'src/main/resources'
+}
+
+build.dependsOn copyJar
