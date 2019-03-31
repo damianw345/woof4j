@@ -3,15 +3,12 @@ package com.damianw345.woof4j
 import org.rauschig.jarchivelib.ArchiveFormat
 import org.rauschig.jarchivelib.CompressionType
 import picocli.CommandLine
-import picocli.CommandLine.Command
-import picocli.CommandLine.Option
-import picocli.CommandLine.Parameters
+import picocli.CommandLine.*
 import spark.Spark
-import spark.Spark.*
-import java.io.File
+import spark.Spark.after
+import spark.Spark.port
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.nio.file.Paths
 import kotlin.system.exitProcess
 
 
@@ -59,7 +56,7 @@ class Woof4jCli : Runnable {
 //    private var upload = ""
 
     @Parameters(
-        description = ["""When a directory is specified, an tar archive gets served. By default it is gzip compressed"""],
+        description = ["""Optional only if -s or --shareWoof option is specified. When a directory is specified, a tar archive gets served. By default it is gzip compressed"""],
         arity = "0..1"
     )
     private var filePath = ""
@@ -76,13 +73,9 @@ class Woof4jCli : Runnable {
         port(port)
         Spark.ipAddress(ipAddress)
 
-        println("Serving at: http://$ipAddress:$port/")
+        utils.serve(shareWoof, filePath)
 
-        if(shareWoof){
-            utils.serveWoofJar()
-        } else {
-            utils.serveFile(filePath)
-        }
+        println("Serving at: http://$ipAddress:$port/")
 
         after("/"){ _, _ ->
             if(--count <= 0){

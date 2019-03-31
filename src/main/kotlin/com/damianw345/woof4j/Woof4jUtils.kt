@@ -3,32 +3,45 @@ package com.damianw345.woof4j
 import org.rauschig.jarchivelib.ArchiveFormat
 import org.rauschig.jarchivelib.ArchiverFactory
 import org.rauschig.jarchivelib.CompressionType
+import picocli.CommandLine
 import spark.Response
 import spark.Spark
 import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
-import java.lang.Thread.sleep
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.system.exitProcess
 
 class Woof4jUtils(private val packMethod: PackMethod) {
 
-    fun serveFile(filePath: String){
-        Spark.get("/") { _, response ->
-
-            var path = Paths.get(filePath)
-            val file = path.toFile()
-
-            if (file.isDirectory)
-                path = packFile(file, packMethod.archiveFormat, packMethod.compressionType).toPath()
-
-            serializeFile(path, response)
+    fun serve(shareWoof: Boolean, filePath: String){
+        if(shareWoof){
+            serveWoofJar()
+        } else {
+            serveFile(filePath)
         }
     }
 
-    fun serveWoofJar(){
+    private fun serveFile(filePath: String){
+
+        if(filePath.isNotBlank()){
+            Spark.get("/") { _, response ->
+
+                var path = Paths.get(filePath)
+                val file = path.toFile()
+
+                if (file.isDirectory)
+                    path = packFile(file, packMethod.archiveFormat, packMethod.compressionType).toPath()
+
+                serializeFile(path, response)
+            }
+        } else{
+            CommandLine.usage(Woof4jCli::class.java, System.out)
+            exitProcess(0)
+        }
+    }
+
+    private fun serveWoofJar(){
         Spark.get("/") { _, response ->
 
             val classLoader = ClassLoader.getSystemClassLoader()
@@ -37,7 +50,7 @@ class Woof4jUtils(private val packMethod: PackMethod) {
             response.header("Content-Type", "application/octet-stream")
             response.header("Content-Disposition", "attachment; filename=woof4j.jar")
 
-            var bytesRead = 0
+            var bytesRead : Int
             val buffer = ByteArray(1024)
 
             val raw = response.raw()
@@ -74,11 +87,5 @@ class Woof4jUtils(private val packMethod: PackMethod) {
 
         raw.outputStream.use { it.write(bytes) }
     }
-
-//    companion object{
-//        fun serveFile() {
-//            serveFile()
-//        }
-//    }
 }
 
